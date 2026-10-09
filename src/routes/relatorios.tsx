@@ -19,7 +19,9 @@ function Relatorios() {
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
   const [s, setS] = useState<Sobreaviso[]>([]);
   const [a, setA] = useState<Acionamento[]>([]);
-  useEffect(() => { Promise.all([db.allSobreavisos(), db.allAcionamentos()]).then(([x, y]) => { setS(x); setA(y); }); }, []);
+  const [edit, setEdit] = useState<Acionamento | null>(null);
+  const load = () => Promise.all([db.allSobreavisos(), db.allAcionamentos()]).then(([x, y]) => { setS(x); setA(y); });
+  useEffect(() => { load(); }, []);
 
   const doMes = s.filter((x) => x.data.startsWith(mes));
   const ids = new Set(doMes.map((x) => x.id));
@@ -49,12 +51,47 @@ function Relatorios() {
                   {new Date(x.inicio_acionamento).toLocaleString("pt-BR")} → {new Date(x.fim_acionamento!).toLocaleTimeString("pt-BR")}
                 </p>
               </div>
-              <span className="font-mono text-primary">{fmtDur(x.fim_acionamento! - x.inicio_acionamento)}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-primary">{fmtDur(x.fim_acionamento! - x.inicio_acionamento)}</span>
+                <button className="btn-ghost" onClick={() => setEdit(x)}>Editar</button>
+              </div>
             </li>
           ))}
         </ul>
       )}
+      {edit && <EditModal ac={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); }} />}
     </Shell>
+  );
+}
+
+const toLocal = (ms: number) => { const d = new Date(ms); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+
+function EditModal({ ac, onClose, onSaved }: { ac: Acionamento; onClose: () => void; onSaved: () => void }) {
+  const [ini, setIni] = useState(toLocal(ac.inicio_acionamento));
+  const [fim, setFim] = useState(toLocal(ac.fim_acionamento!));
+  const [just, setJust] = useState(ac.justificativa);
+  const i = new Date(ini).getTime(), f = new Date(fim).getTime();
+  const erro = !just.trim() ? "Informe a justificativa." : !(f > i) ? "O fim deve ser depois do início." : "";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur">
+      <div className="panel w-full max-w-md space-y-4">
+        <h2 className="text-xl font-semibold">Editar acionamento</h2>
+        <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Início</span>
+          <input type="datetime-local" className="field" value={ini} onChange={(e) => setIni(e.target.value)} /></label>
+        <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Fim</span>
+          <input type="datetime-local" className="field" value={fim} onChange={(e) => setFim(e.target.value)} /></label>
+        <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Justificativa</span>
+          <textarea className="field min-h-24" value={just} onChange={(e) => setJust(e.target.value)} /></label>
+        {erro && <p className="text-sm text-destructive">{erro}</p>}
+        <div className="flex flex-wrap justify-between gap-2">
+          <button className="btn-ghost text-destructive" onClick={async () => { if (confirm("Excluir este acionamento?")) { await db.deleteAcionamento(ac.id); onSaved(); } }}>Excluir</button>
+          <div className="flex gap-2">
+            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+            <button className="btn-primary" disabled={!!erro} onClick={async () => { await db.putAcionamento({ ...ac, inicio_acionamento: i, fim_acionamento: f, justificativa: just.trim() }); onSaved(); }}>Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
