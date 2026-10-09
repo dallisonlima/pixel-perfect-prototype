@@ -46,6 +46,7 @@ export const db = {
     else await req(s.put({ id: data, data, tipo: tipoDe(data) }));
   },
   putAcionamento: async (a: Acionamento) => req((await store("acionamentos", "readwrite")).put(a)),
+  deleteAcionamento: async (id: string) => req((await store("acionamentos", "readwrite")).delete(id)),
 };
 
 // ---------- Regras de horário ----------
