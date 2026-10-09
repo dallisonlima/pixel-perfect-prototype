@@ -50,7 +50,7 @@ export const db = {
 
 // ---------- Regras de horário ----------
 export function parseDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
+  const [y = 1970, m = 1, d = 1] = iso.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 export function toISO(d: Date) {
