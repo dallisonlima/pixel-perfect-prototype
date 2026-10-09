@@ -47,6 +47,14 @@ export const db = {
   },
   putAcionamento: async (a: Acionamento) => req((await store("acionamentos", "readwrite")).put(a)),
   deleteAcionamento: async (id: string) => req((await store("acionamentos", "readwrite")).delete(id)),
+  ensureSobreaviso: async (data: string) => req((await store("sobreavisos", "readwrite")).put({ id: data, data, tipo: tipoDe(data) })),
+};
+
+// Descobre a qual dia de sobreaviso um horário pertence (antes das 08h → plantão do dia anterior)
+export function diaDoPlantao(ms: number) {
+  const d = new Date(ms);
+  if (d.getHours() < 8) d.setDate(d.getDate() - 1);
+  return toISO(d);
 };
 
 // ---------- Regras de horário ----------

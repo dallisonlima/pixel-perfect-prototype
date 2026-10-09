@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
-import { db, janela, fmtDur, fmtHoras, type Acionamento, type Sobreaviso } from "@/lib/db";
+import { db, diaDoPlantao, janela, fmtDur, fmtHoras, type Acionamento, type Sobreaviso } from "@/lib/db";
 
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
@@ -20,6 +20,7 @@ function Relatorios() {
   const [s, setS] = useState<Sobreaviso[]>([]);
   const [a, setA] = useState<Acionamento[]>([]);
   const [edit, setEdit] = useState<Acionamento | null>(null);
+  const [novo, setNovo] = useState(false);
   const load = () => Promise.all([db.allSobreavisos(), db.allAcionamentos()]).then(([x, y]) => { setS(x); setA(y); });
   useEffect(() => { load(); }, []);
 
@@ -33,7 +34,10 @@ function Relatorios() {
     <Shell>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Relatório mensal</h1>
-        <input type="month" className="field w-auto" value={mes} onChange={(e) => setMes(e.target.value)} />
+        <div className="flex gap-2">
+          <input type="month" className="field w-auto" value={mes} onChange={(e) => setMes(e.target.value)} />
+          <button className="btn-primary" onClick={() => setNovo(true)}>+ Adicionar acionamento</button>
+        </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Dias de sobreaviso" value={String(doMes.length)} />
@@ -59,6 +63,7 @@ function Relatorios() {
           ))}
         </ul>
       )}
+      {novo && <EditModal ac={null} onClose={() => setNovo(false)} onSaved={() => { setNovo(false); load(); }} />}
       {edit && <EditModal ac={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); }} />}
     </Shell>
   );
@@ -66,16 +71,17 @@ function Relatorios() {
 
 const toLocal = (ms: number) => { const d = new Date(ms); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
 
-function EditModal({ ac, onClose, onSaved }: { ac: Acionamento; onClose: () => void; onSaved: () => void }) {
-  const [ini, setIni] = useState(toLocal(ac.inicio_acionamento));
-  const [fim, setFim] = useState(toLocal(ac.fim_acionamento!));
-  const [just, setJust] = useState(ac.justificativa);
+function EditModal({ ac, onClose, onSaved }: { ac: Acionamento | null; onClose: () => void; onSaved: () => void }) {
+  const [ini, setIni] = useState(ac ? toLocal(ac.inicio_acionamento) : "");
+  const [fim, setFim] = useState(ac ? toLocal(ac.fim_acionamento!) : "");
+  const [just, setJust] = useState(ac?.justificativa ?? "");
   const i = new Date(ini).getTime(), f = new Date(fim).getTime();
-  const erro = !just.trim() ? "Informe a justificativa." : !(f > i) ? "O fim deve ser depois do início." : "";
+  const erro = !ini || !fim ? "Informe início e fim." : !just.trim() ? "Informe a justificativa." : !(f > i) ? "O fim deve ser depois do início." : "";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur">
       <div className="panel w-full max-w-md space-y-4">
-        <h2 className="text-xl font-semibold">Editar acionamento</h2>
+        <h2 className="text-xl font-semibold">{ac ? "Editar acionamento" : "Adicionar acionamento"}</h2>
+        {!ac && <p className="text-sm text-muted-foreground">Se o dia não estiver marcado como sobreaviso, ele será marcado automaticamente.</p>}
         <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Início</span>
           <input type="datetime-local" className="field" value={ini} onChange={(e) => setIni(e.target.value)} /></label>
         <label className="block space-y-1 text-sm"><span className="text-muted-foreground">Fim</span>
@@ -84,10 +90,15 @@ function EditModal({ ac, onClose, onSaved }: { ac: Acionamento; onClose: () => v
           <textarea className="field min-h-24" value={just} onChange={(e) => setJust(e.target.value)} /></label>
         {erro && <p className="text-sm text-destructive">{erro}</p>}
         <div className="flex flex-wrap justify-between gap-2">
-          <button className="btn-ghost text-destructive" onClick={async () => { if (confirm("Excluir este acionamento?")) { await db.deleteAcionamento(ac.id); onSaved(); } }}>Excluir</button>
+          {ac ? <button className="btn-ghost text-destructive" onClick={async () => { if (confirm("Excluir este acionamento?")) { await db.deleteAcionamento(ac.id); onSaved(); } }}>Excluir</button> : <span />}
           <div className="flex gap-2">
             <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn-primary" disabled={!!erro} onClick={async () => { await db.putAcionamento({ ...ac, inicio_acionamento: i, fim_acionamento: f, justificativa: just.trim() }); onSaved(); }}>Salvar</button>
+            <button className="btn-primary" disabled={!!erro} onClick={async () => {
+              const dia = diaDoPlantao(i);
+              await db.ensureSobreaviso(dia);
+              await db.putAcionamento({ id: ac?.id ?? crypto.randomUUID(), sobreaviso_id: dia, inicio_acionamento: i, fim_acionamento: f, justificativa: just.trim() });
+              onSaved();
+            }}>Salvar</button>
           </div>
         </div>
       </div>
