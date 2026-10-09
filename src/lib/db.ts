@@ -1,6 +1,10 @@
 // IndexedDB local (100% client-side) — stores: sobreavisos, acionamentos
 export type Tipo = "dia_semana" | "sabado" | "domingo";
-export interface Sobreaviso { id: string; data: string; tipo: Tipo }
+export interface Sobreaviso {
+  id: string;
+  data: string;
+  tipo: Tipo;
+}
 export interface Acionamento {
   id: string;
   sobreaviso_id: string;
@@ -46,8 +50,10 @@ export const db = {
     else await req(s.put({ id: data, data, tipo: tipoDe(data) }));
   },
   putAcionamento: async (a: Acionamento) => req((await store("acionamentos", "readwrite")).put(a)),
-  deleteAcionamento: async (id: string) => req((await store("acionamentos", "readwrite")).delete(id)),
-  ensureSobreaviso: async (data: string) => req((await store("sobreavisos", "readwrite")).put({ id: data, data, tipo: tipoDe(data) })),
+  deleteAcionamento: async (id: string) =>
+    req((await store("acionamentos", "readwrite")).delete(id)),
+  ensureSobreaviso: async (data: string) =>
+    req((await store("sobreavisos", "readwrite")).put({ id: data, data, tipo: tipoDe(data) })),
 };
 
 // Descobre a qual dia de sobreaviso um horário pertence (antes das 08h → plantão do dia anterior)
@@ -55,7 +61,7 @@ export function diaDoPlantao(ms: number) {
   const d = new Date(ms);
   if (d.getHours() < 8) d.setDate(d.getDate() - 1);
   return toISO(d);
-};
+}
 
 // ---------- Regras de horário ----------
 export function parseDate(iso: string) {
@@ -87,8 +93,15 @@ export function sobreavisoAtivo(list: Sobreaviso[], now = new Date()) {
 }
 export function fmtDur(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const h = Math.floor(s / 3600),
+    m = Math.floor((s % 3600) / 60),
+    sec = s % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
-export const fmtHoras = (h: number) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, "0")}m`;
-export const TIPO_LABEL: Record<Tipo, string> = { dia_semana: "Dia útil · 18h→08h", sabado: "Sábado · 24h", domingo: "Domingo · 24h" };
+export const fmtHoras = (h: number) =>
+  `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, "0")}m`;
+export const TIPO_LABEL: Record<Tipo, string> = {
+  dia_semana: "Dia útil · 18h→08h",
+  sabado: "Sábado · 24h",
+  domingo: "Domingo · 24h",
+};

@@ -86,8 +86,19 @@
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.8 0.16 75);
-  --chart-1: oklch(0.8 0.16 75); --chart-2: oklch(0.75 0.15 155); --chart-3: oklch(0.6 0.1 230); --chart-4: oklch(0.7 0.1 30); --chart-5: oklch(0.6 0.05 250);
-  --sidebar: oklch(0.21 0.012 250); --sidebar-foreground: oklch(0.95 0.005 250); --sidebar-primary: oklch(0.8 0.16 75); --sidebar-primary-foreground: oklch(0.18 0.02 70); --sidebar-accent: oklch(0.26 0.012 250); --sidebar-accent-foreground: oklch(0.95 0.005 250); --sidebar-border: oklch(1 0 0 / 9%); --sidebar-ring: oklch(0.8 0.16 75);
+  --chart-1: oklch(0.8 0.16 75);
+  --chart-2: oklch(0.75 0.15 155);
+  --chart-3: oklch(0.6 0.1 230);
+  --chart-4: oklch(0.7 0.1 30);
+  --chart-5: oklch(0.6 0.05 250);
+  --sidebar: oklch(0.21 0.012 250);
+  --sidebar-foreground: oklch(0.95 0.005 250);
+  --sidebar-primary: oklch(0.8 0.16 75);
+  --sidebar-primary-foreground: oklch(0.18 0.02 70);
+  --sidebar-accent: oklch(0.26 0.012 250);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.8 0.16 75);
   --font-sans: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
@@ -105,18 +116,48 @@
 }
 
 @layer components {
-  .panel { @apply rounded-xl border border-border bg-card p-5; }
-  .nav-link { @apply rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground; }
-  .nav-link-active { @apply bg-secondary text-foreground; }
-  .btn-big { @apply rounded-full bg-primary px-10 py-6 text-xl font-semibold text-primary-foreground transition-transform hover:scale-105 active:scale-95; box-shadow: 0 0 60px -10px var(--primary); }
-  .btn-stop { @apply bg-destructive text-destructive-foreground; box-shadow: 0 0 60px -10px var(--destructive); }
-  .btn-primary { @apply rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40; }
-  .btn-ghost { @apply rounded-md border border-border px-4 py-2 text-sm hover:bg-secondary; }
-  .field { @apply w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring; }
-  .badge-on { @apply rounded-full bg-primary/15 px-3 py-1 font-mono text-xs text-primary; }
-  .badge-off { @apply rounded-full bg-secondary px-3 py-1 font-mono text-xs text-muted-foreground; }
-  .badge-live { @apply animate-pulse rounded-full bg-destructive/15 px-3 py-1 font-mono text-xs text-destructive; }
-  .day { @apply flex aspect-square flex-col items-center justify-center rounded-lg border border-border bg-card text-sm transition-colors hover:border-primary/60; }
-  .day-on { @apply border-primary bg-primary text-primary-foreground; }
-  .day-today { @apply ring-2 ring-ring/50; }
+  .panel {
+    @apply rounded-xl border border-border bg-card p-5;
+  }
+  .nav-link {
+    @apply rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground;
+  }
+  .nav-link-active {
+    @apply bg-secondary text-foreground;
+  }
+  .btn-big {
+    @apply rounded-full bg-primary px-10 py-6 text-xl font-semibold text-primary-foreground transition-transform hover:scale-105 active:scale-95;
+    box-shadow: 0 0 60px -10px var(--primary);
+  }
+  .btn-stop {
+    @apply bg-destructive text-destructive-foreground;
+    box-shadow: 0 0 60px -10px var(--destructive);
+  }
+  .btn-primary {
+    @apply rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40;
+  }
+  .btn-ghost {
+    @apply rounded-md border border-border px-4 py-2 text-sm hover:bg-secondary;
+  }
+  .field {
+    @apply w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring;
+  }
+  .badge-on {
+    @apply rounded-full bg-primary/15 px-3 py-1 font-mono text-xs text-primary;
+  }
+  .badge-off {
+    @apply rounded-full bg-secondary px-3 py-1 font-mono text-xs text-muted-foreground;
+  }
+  .badge-live {
+    @apply animate-pulse rounded-full bg-destructive/15 px-3 py-1 font-mono text-xs text-destructive;
+  }
+  .day {
+    @apply flex aspect-square flex-col items-center justify-center rounded-lg border border-border bg-card text-sm transition-colors hover:border-primary/60;
+  }
+  .day-on {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+  .day-today {
+    @apply ring-2 ring-ring/50;
+  }
 }

@@ -19,16 +19,33 @@ function Login({ onOk }: { onOk: () => void }) {
         className="panel w-full max-w-sm space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (u === "admin" && p === "admin") { localStorage.setItem(KEY, "1"); onOk(); }
-          else setErr(true);
+          if (u === "admin" && p === "admin") {
+            localStorage.setItem(KEY, "1");
+            onOk();
+          } else setErr(true);
         }}
       >
         <span className="font-mono text-sm tracking-widest text-primary">● SOBREAVISO</span>
         <h1 className="text-2xl font-semibold">Entrar</h1>
-        <input className="field" placeholder="Usuário" autoComplete="username" value={u} onChange={(e) => setU(e.target.value)} />
-        <input className="field" type="password" placeholder="Senha" autoComplete="current-password" value={p} onChange={(e) => setP(e.target.value)} />
+        <input
+          className="field"
+          placeholder="Usuário"
+          autoComplete="username"
+          value={u}
+          onChange={(e) => setU(e.target.value)}
+        />
+        <input
+          className="field"
+          type="password"
+          placeholder="Senha"
+          autoComplete="current-password"
+          value={p}
+          onChange={(e) => setP(e.target.value)}
+        />
         {err && <p className="text-sm text-destructive">Usuário ou senha incorretos.</p>}
-        <button type="submit" className="btn-primary w-full">Entrar</button>
+        <button type="submit" className="btn-primary w-full">
+          Entrar
+        </button>
       </form>
     </div>
   );
@@ -36,7 +53,9 @@ function Login({ onOk }: { onOk: () => void }) {
 
 export function Shell({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<boolean | null>(null);
-  useEffect(() => { setAuth(localStorage.getItem(KEY) === "1"); }, []);
+  useEffect(() => {
+    setAuth(localStorage.getItem(KEY) === "1");
+  }, []);
 
   if (auth === null) return <div className="min-h-screen" />;
   if (!auth) return <Login onOk={() => setAuth(true)} />;
@@ -48,11 +67,25 @@ export function Shell({ children }: { children: ReactNode }) {
           <span className="font-mono text-sm tracking-widest text-primary">● SOBREAVISO</span>
           <nav className="flex items-center gap-1">
             {links.map((l) => (
-              <Link key={l.to} to={l.to} className="nav-link" activeProps={{ className: "nav-link-active" }} activeOptions={{ exact: true }}>
+              <Link
+                key={l.to}
+                to={l.to}
+                className="nav-link"
+                activeProps={{ className: "nav-link-active" }}
+                activeOptions={{ exact: true }}
+              >
                 {l.label}
               </Link>
             ))}
-            <button className="nav-link" onClick={() => { localStorage.removeItem(KEY); setAuth(false); }}>Sair</button>
+            <button
+              className="nav-link"
+              onClick={() => {
+                localStorage.removeItem(KEY);
+                setAuth(false);
+              }}
+            >
+              Sair
+            </button>
           </nav>
         </div>
       </header>
