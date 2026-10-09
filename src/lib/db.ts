@@ -13,22 +13,37 @@ export interface Acionamento {
   justificativa: string;
 }
 
+export interface UsuarioLocal {
+  usuario: string;
+  senhaHash: string;
+}
+
 const DB = "ponto-sobreaviso";
 let dbp: Promise<IDBDatabase> | null = null;
 function open(): Promise<IDBDatabase> {
   if (!dbp)
     dbp = new Promise((res, rej) => {
-      const r = indexedDB.open(DB, 1);
+      const r = indexedDB.open(DB, 2);
       r.onupgradeneeded = () => {
         const d = r.result;
-        d.createObjectStore("sobreavisos", { keyPath: "id" });
-        const a = d.createObjectStore("acionamentos", { keyPath: "id" });
-        a.createIndex("sobreaviso_id", "sobreaviso_id");
+        if (!d.objectStoreNames.contains("sobreavisos"))
+          d.createObjectStore("sobreavisos", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("acionamentos")) {
+          const a = d.createObjectStore("acionamentos", { keyPath: "id" });
+          a.createIndex("sobreaviso_id", "sobreaviso_id");
+        }
+        if (!d.objectStoreNames.contains("usuarios"))
+          d.createObjectStore("usuarios", { keyPath: "usuario" });
       };
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);
     });
   return dbp;
+}
+
+async function hashSenha(senha: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(senha));
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 function req<T>(r: IDBRequest<T>) {
   return new Promise<T>((res, rej) => {
@@ -54,6 +69,22 @@ export const db = {
     req((await store("acionamentos", "readwrite")).delete(id)),
   ensureSobreaviso: async (data: string) =>
     req((await store("sobreavisos", "readwrite")).put({ id: data, data, tipo: tipoDe(data) })),
+  getUsuario: async () => {
+    const all = await req<UsuarioLocal[]>((await store("usuarios")).getAll());
+    return all[0] ?? null;
+  },
+  criarUsuario: async (usuario: string, senha: string) => {
+    const nome = usuario.trim();
+    if (!nome || !senha) throw new Error("Informe usuário e senha.");
+    if (await db.getUsuario()) throw new Error("Já existe um usuário neste navegador.");
+    const senhaHash = await hashSenha(senha);
+    await req((await store("usuarios", "readwrite")).put({ usuario: nome, senhaHash }));
+  },
+  verificarLogin: async (usuario: string, senha: string) => {
+    const salvo = await db.getUsuario();
+    if (!salvo || salvo.usuario !== usuario.trim()) return false;
+    return salvo.senhaHash === (await hashSenha(senha));
+  },
 };
 
 // Descobre a qual dia de sobreaviso um horário pertence (antes das 08h → plantão do dia anterior)
