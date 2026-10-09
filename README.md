@@ -1,24 +1,19 @@
-# Pixel Perfect Prototype
+# Pixel Perfect Prototype - Ponto de Sobreaviso
 
-Implement exactly the screenshot and nothing else
+Sistema de ponto e gestão de sobreaviso e acionamentos (100% client-side via IndexedDB).
 
-This project was built with [Lovable](https://lovable.dev).
+## Desenvolvimento
 
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/f6c52546-850d-47a3-a1c5-814b73518186).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Para executar localmente, você precisa do Node.js e npm:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+Outros scripts disponíveis:
+
+- `npm run test`: Executa os testes automatizados com Vitest
+- `npm run build`: Cria a build de produção
+- `npm run lint`: Valida as regras de lint com ESLint
+- `npm run format`: Formata os arquivos com Prettier
