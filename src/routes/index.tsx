@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
 import {
   db,
+  diaDoAcionamento,
+  plantaoDoAcionamento,
   sobreavisoAtivo,
   janela,
   fmtDur,
@@ -26,7 +28,7 @@ export const Route = createFileRoute("/")({
   component: Painel,
 });
 
-function Painel() {
+export function Painel() {
   const [list, setList] = useState<Sobreaviso[]>([]);
   const [aberto, setAberto] = useState<Acionamento | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -64,6 +66,20 @@ function Painel() {
     await db.putAcionamento(a);
     setAberto(a);
   };
+  const iniciarFora = async () => {
+    if (ativo || aberto) return;
+    const inicio = Date.now();
+    const a: Acionamento = {
+      id: crypto.randomUUID(),
+      sobreaviso_id: diaDoAcionamento(list, { inicio_acionamento: inicio }),
+      inicio_acionamento: inicio,
+      fim_acionamento: null,
+      justificativa: "",
+    };
+    await db.putAcionamento(a);
+    setAberto(a);
+  };
+  const fora = aberto ? !plantaoDoAcionamento(list, aberto) : false;
   const finalizar = async () => {
     if (!aberto || !just.trim()) return;
     await db.putAcionamento({ ...aberto, fim_acionamento: Date.now(), justificativa: just.trim() });
@@ -84,7 +100,9 @@ function Painel() {
       <section className="panel flex flex-col items-center gap-6 py-14 text-center">
         {aberto ? (
           <>
-            <span className="badge-live">● Acionamento em andamento</span>
+            <span className={fora ? "badge-extra" : "badge-live"}>
+              {fora ? "● Fora do plantão" : "● Acionamento em andamento"}
+            </span>
             <div className="font-mono text-6xl tabular-nums sm:text-7xl">
               {fmtDur(now - aberto.inicio_acionamento)}
             </div>
@@ -119,6 +137,9 @@ function Painel() {
                 ? `Próximo: ${proximo.j.inicio.toLocaleString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
                 : "Marque seus dias no Calendário."}
             </p>
+            <button className="btn-big btn-extra max-w-sm text-balance" onClick={iniciarFora}>
+              Iniciar fora do plantão
+            </button>
           </>
         )}
       </section>

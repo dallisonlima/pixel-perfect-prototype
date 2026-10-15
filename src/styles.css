@@ -137,6 +137,10 @@
     @apply bg-destructive text-destructive-foreground;
     box-shadow: 0 0 60px -10px var(--destructive);
   }
+  .btn-extra {
+    @apply bg-info text-info-foreground;
+    box-shadow: 0 0 60px -10px var(--info);
+  }
   .btn-primary {
     @apply rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-40;
   }
