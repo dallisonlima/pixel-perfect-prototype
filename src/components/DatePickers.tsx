@@ -23,62 +23,84 @@ export function MonthPicker({
     year: "numeric",
   });
   const hoje = new Date();
+  const mudarMes = (delta: number) => {
+    const data = new Date(ano, mes - 1 + delta, 1);
+    onChange(`${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`);
+  };
 
   return (
-    <Popover
-      open={aberto}
-      onOpenChange={(v) => {
-        setAberto(v);
-        if (v) setAnoVisivel(ano);
-      }}
-    >
-      <PopoverTrigger asChild>
-        <button type="button" className="picker-trigger w-auto capitalize">
-          <CalendarDays className="h-4 w-4 text-primary" />
-          {rotulo}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="picker-popover w-64">
-        <div className="mb-3 flex items-center justify-between">
-          <button
-            type="button"
-            className="picker-nav"
-            aria-label="Ano anterior"
-            onClick={() => setAnoVisivel(anoVisivel - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        className="picker-nav"
+        aria-label="Mês anterior"
+        onClick={() => mudarMes(-1)}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <Popover
+        open={aberto}
+        onOpenChange={(v) => {
+          setAberto(v);
+          if (v) setAnoVisivel(ano);
+        }}
+      >
+        <PopoverTrigger asChild>
+          <button type="button" className="picker-trigger w-auto capitalize">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            {rotulo}
           </button>
-          <span className="font-mono text-sm font-semibold">{anoVisivel}</span>
-          <button
-            type="button"
-            className="picker-nav"
-            aria-label="Próximo ano"
-            onClick={() => setAnoVisivel(anoVisivel + 1)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-1.5">
-          {MESES.map((nome, i) => {
-            const selecionado = anoVisivel === ano && i + 1 === mes;
-            const atual = anoVisivel === hoje.getFullYear() && i === hoje.getMonth();
-            return (
-              <button
-                key={nome}
-                type="button"
-                className={`picker-month ${selecionado ? "picker-month-on" : ""} ${atual && !selecionado ? "picker-month-today" : ""}`}
-                onClick={() => {
-                  onChange(`${anoVisivel}-${String(i + 1).padStart(2, "0")}`);
-                  setAberto(false);
-                }}
-              >
-                {nome}
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="picker-popover w-64">
+          <div className="mb-3 flex items-center justify-between">
+            <button
+              type="button"
+              className="picker-nav"
+              aria-label="Ano anterior"
+              onClick={() => setAnoVisivel(anoVisivel - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="font-mono text-sm font-semibold">{anoVisivel}</span>
+            <button
+              type="button"
+              className="picker-nav"
+              aria-label="Próximo ano"
+              onClick={() => setAnoVisivel(anoVisivel + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {MESES.map((nome, i) => {
+              const selecionado = anoVisivel === ano && i + 1 === mes;
+              const atual = anoVisivel === hoje.getFullYear() && i === hoje.getMonth();
+              return (
+                <button
+                  key={nome}
+                  type="button"
+                  className={`picker-month ${selecionado ? "picker-month-on" : ""} ${atual && !selecionado ? "picker-month-today" : ""}`}
+                  onClick={() => {
+                    onChange(`${anoVisivel}-${String(i + 1).padStart(2, "0")}`);
+                    setAberto(false);
+                  }}
+                >
+                  {nome}
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <button
+        type="button"
+        className="picker-nav"
+        aria-label="Próximo mês"
+        onClick={() => mudarMes(1)}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 

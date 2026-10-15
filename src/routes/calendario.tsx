@@ -32,13 +32,16 @@ export function Calendario() {
     setAvulsos(
       new Set(a.filter((x) => !plantaoDoAcionamento(s, x)).map((x) => diaDoAcionamento(s, x))),
     );
+    const dias = new Set(s.filter((x) => x.lancado).map((x) => x.data));
     const porDia = new Map<string, boolean>();
     for (const x of a) {
       if (!x.fim_acionamento) continue;
       const dia = diaDoAcionamento(s, x);
+      if (s.some((p) => p.data === dia)) continue;
       porDia.set(dia, (porDia.get(dia) ?? true) && !!x.lancado);
     }
-    setLancados(new Set([...porDia].filter(([, ok]) => ok).map(([dia]) => dia)));
+    for (const [dia, ok] of porDia) if (ok) dias.add(dia);
+    setLancados(dias);
   };
   useEffect(() => {
     load();
@@ -129,7 +132,7 @@ export function Calendario() {
             <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success text-background">
               <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
             </span>
-            Todos os acionamentos do dia lançados na plataforma oficial
+            Dia lançado na plataforma oficial, inclusive plantão sem acionamento
           </li>
           <li className="flex items-center gap-2.5">
             <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary">

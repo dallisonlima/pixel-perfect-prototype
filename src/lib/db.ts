@@ -4,6 +4,8 @@ export interface Sobreaviso {
   id: string;
   data: string;
   tipo: Tipo;
+  /** Dia já lançado na plataforma oficial, mesmo sem acionamento. */
+  lancado?: boolean;
 }
 export interface Acionamento {
   id: string;
@@ -65,6 +67,12 @@ export const db = {
     const existing = await req<Sobreaviso | undefined>(s.get(data));
     if (existing) await req(s.delete(data));
     else await req(s.put({ id: data, data, tipo: tipoDe(data) }));
+  },
+  marcarSobreavisoLancado: async (data: string) => {
+    const s = await store("sobreavisos", "readwrite");
+    const existing = await req<Sobreaviso | undefined>(s.get(data));
+    if (!existing) return;
+    await req(s.put({ ...existing, lancado: !existing.lancado }));
   },
   putAcionamento: async (a: Acionamento) => req((await store("acionamentos", "readwrite")).put(a)),
   deleteAcionamento: async (id: string) =>

@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Acionamento } from "@/lib/db";
+import type { Acionamento, Sobreaviso } from "@/lib/db";
 
 const allSobreavisos = vi.fn();
 const allAcionamentos = vi.fn();
@@ -66,8 +66,28 @@ describe("calendário com lançamentos", () => {
     expect(screen.getByText("LEGENDA")).toBeInTheDocument();
     expect(screen.getByText("Plantão marcado")).toBeInTheDocument();
     expect(screen.getByText(/Horas fora do plantão/)).toBeInTheDocument();
+    expect(screen.getByText(/Dia lançado na plataforma oficial/)).toBeInTheDocument();
+  });
+
+  it("mostra o selo no plantão marcado como lançado, mesmo sem acionamento", async () => {
+    const plantao: Sobreaviso = {
+      id: "2026-10-10",
+      data: "2026-10-10",
+      tipo: "sabado",
+      lancado: true,
+    };
+    allSobreavisos.mockResolvedValue([plantao]);
+    allAcionamentos.mockResolvedValue([]);
+
+    render(<Calendario />);
+
+    const dia = (n: string) =>
+      screen.getByText(n, { selector: "span.font-mono" }).closest("button")!;
+    await vi.waitFor(() =>
+      expect(within(dia("10")).getByLabelText("Lançado na plataforma oficial")).toBeInTheDocument(),
+    );
     expect(
-      screen.getByText("Todos os acionamentos do dia lançados na plataforma oficial"),
-    ).toBeInTheDocument();
+      within(dia("11")).queryByLabelText("Lançado na plataforma oficial"),
+    ).not.toBeInTheDocument();
   });
 });

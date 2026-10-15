@@ -15,6 +15,22 @@ describe("seletores de data", () => {
     expect(onChange).toHaveBeenCalledWith("2027-03");
   });
 
+  it("troca o mês pelas setas, inclusive na virada do ano", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<MonthPicker value="2026-10" onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mês anterior" }));
+    expect(onChange).toHaveBeenCalledWith("2026-09");
+
+    rerender(<MonthPicker value="2026-01" onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Mês anterior" }));
+    expect(onChange).toHaveBeenCalledWith("2025-12");
+
+    rerender(<MonthPicker value="2026-12" onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Próximo mês" }));
+    expect(onChange).toHaveBeenCalledWith("2027-01");
+  });
+
   it("mantém a hora ao escolher outro dia e atualiza a hora", () => {
     function Campo() {
       const [v, setV] = useState("2026-10-14T22:30");

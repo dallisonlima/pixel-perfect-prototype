@@ -6,6 +6,7 @@ import type { Acionamento } from "@/lib/db";
 const allSobreavisos = vi.fn();
 const allAcionamentos = vi.fn();
 const putAcionamento = vi.fn();
+const marcarSobreavisoLancado = vi.fn();
 const getUsuario = vi.fn();
 
 vi.mock("@/lib/db", async () => {
@@ -16,6 +17,7 @@ vi.mock("@/lib/db", async () => {
       allSobreavisos: (...args: unknown[]) => allSobreavisos(...args),
       allAcionamentos: (...args: unknown[]) => allAcionamentos(...args),
       putAcionamento: (...args: unknown[]) => putAcionamento(...args),
+      marcarSobreavisoLancado: (...args: unknown[]) => marcarSobreavisoLancado(...args),
       getUsuario: (...args: unknown[]) => getUsuario(...args),
     },
   };
@@ -44,6 +46,7 @@ describe("marcador de lançamento oficial", () => {
     allSobreavisos.mockReset().mockResolvedValue([]);
     allAcionamentos.mockReset().mockResolvedValue([acionamento]);
     putAcionamento.mockReset().mockResolvedValue(undefined);
+    marcarSobreavisoLancado.mockReset().mockResolvedValue(undefined);
     getUsuario.mockReset().mockResolvedValue({ usuario: "ana", senhaHash: "x" });
   });
 
@@ -59,7 +62,8 @@ describe("marcador de lançamento oficial", () => {
     });
     expect(caixa).not.toBeChecked();
     expect(caixa).toHaveTextContent("Lançar");
-    expect(screen.getByText("0 de 1 lançados na plataforma oficial")).toBeInTheDocument();
+    expect(document.querySelector("details")?.open).toBe(false);
+    expect(screen.getByText("Queda no banco")).toBeInTheDocument();
 
     fireEvent.click(caixa);
 
@@ -83,5 +87,25 @@ describe("marcador de lançamento oficial", () => {
 
     await vi.waitFor(() => expect(putAcionamento).toHaveBeenCalledOnce());
     expect(putAcionamento.mock.calls[0]![0]).toMatchObject({ id: "ac-1", lancado: true });
+  });
+
+  it("marca um plantão sem acionamento e mostra só as horas de sobreaviso", async () => {
+    allSobreavisos.mockResolvedValue([{ id: "2026-10-10", data: "2026-10-10", tipo: "sabado" }]);
+    allAcionamentos.mockResolvedValue([]);
+
+    render(<Relatorios />);
+
+    expect(await screen.findByText(/sem acionamento/)).toBeInTheDocument();
+    expect(document.querySelector("details")).toBeNull();
+    expect(document.querySelector("pre")?.textContent).toBe(
+      "08:00 -> 23:59 = Sobreaviso\n00:00 -> 07:59 = Sobreaviso",
+    );
+    expect(screen.getByText("0 de 1 dias lançados na plataforma oficial")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Dia lançado na plataforma oficial: 2026-10-10" }),
+    );
+
+    await vi.waitFor(() => expect(marcarSobreavisoLancado).toHaveBeenCalledWith("2026-10-10"));
   });
 });

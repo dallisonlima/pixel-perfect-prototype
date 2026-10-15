@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import {
   db,
@@ -9,10 +9,12 @@ import {
   janela,
   fmtDur,
   fmtHoras,
+  TIPO_LABEL,
   type Acionamento,
   type Sobreaviso,
 } from "@/lib/db";
 import { EspelhoModal } from "@/components/EspelhoModal";
+import { gerarEspelhoForaDoPlantao, gerarEspelhoPlantao } from "@/lib/espelho";
 import { DateTimePicker, MonthPicker } from "@/components/DatePickers";
 
 export const Route = createFileRoute("/relatorios")({
@@ -52,10 +54,57 @@ export function Relatorios() {
   const hSob = doMes.reduce((t, x) => t + janela(x.data).horas, 0);
   const msTrab = acs.filter((x) => !foraDoPlantao(x)).reduce((t, x) => t + dur(x), 0);
   const msExtra = acs.filter(foraDoPlantao).reduce((t, x) => t + dur(x), 0);
-  const lancados = acs.filter((x) => x.lancado).length;
+  const dias = [...doMes].sort((p, q) => p.data.localeCompare(q.data));
+  const diasLancados = dias.filter((x) => x.lancado).length;
+  const datasPlantao = new Set(dias.map((dia) => dia.data));
+  const grupos = [
+    ...dias.map((dia) => ({
+      id: dia.id,
+      data: dia.data,
+      plantao: dia,
+      chamados: acs.filter(
+        (x) =>
+          plantaoDoAcionamento(s, x)?.data === dia.data ||
+          (foraDoPlantao(x) && diaDoAcionamento(s, x) === dia.data),
+      ),
+    })),
+    ...[
+      ...new Set(
+        acs
+          .filter((x) => foraDoPlantao(x) && !datasPlantao.has(diaDoAcionamento(s, x)))
+          .map((x) => diaDoAcionamento(s, x)),
+      ),
+    ]
+      .sort()
+      .map((data) => ({
+        id: `fora-${data}`,
+        data,
+        plantao: null as Sobreaviso | null,
+        chamados: acs.filter((x) => foraDoPlantao(x) && diaDoAcionamento(s, x) === data),
+      })),
+  ].sort((p, q) => p.data.localeCompare(q.data));
+
+  const textoDoGrupo = (grupo: (typeof grupos)[number]) => {
+    if (!grupo.plantao) {
+      return gerarEspelhoForaDoPlantao(s, grupo.chamados)
+        .map((p) => p.textoFormatado)
+        .join("\n");
+    }
+    const base = gerarEspelhoPlantao(grupo.plantao, a).textoFormatado;
+    const fora = grupo.chamados.filter((x) => foraDoPlantao(x));
+    if (fora.length === 0) return base;
+    const extra = gerarEspelhoForaDoPlantao(s, fora)
+      .map((p) => p.textoFormatado)
+      .join("\n");
+    return extra ? `${base}\n${extra}` : base;
+  };
 
   const marcarLancado = async (x: Acionamento) => {
     await db.putAcionamento({ ...x, lancado: !x.lancado });
+    load();
+  };
+  const marcarDia = async (dia: Sobreaviso) => {
+    await db.marcarSobreavisoLancado(dia.data);
     load();
   };
 
@@ -86,57 +135,101 @@ export function Relatorios() {
       </div>
       <div className="mb-3 mt-10 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
-          HISTÓRICO DE ACIONAMENTOS
+          DIAS E ACIONAMENTOS
         </h2>
-        {acs.length > 0 && (
+        {dias.length > 0 && (
           <p className="text-sm text-muted-foreground">
-            {lancados} de {acs.length} lançados na plataforma oficial
+            {diasLancados} de {dias.length} dias lançados na plataforma oficial
           </p>
         )}
       </div>
-      {acs.length === 0 ? (
-        <p className="text-muted-foreground">Nenhum acionamento neste mês.</p>
+      {grupos.length === 0 ? (
+        <p className="text-muted-foreground">Nenhum plantão ou acionamento neste mês.</p>
       ) : (
         <ul className="space-y-2">
-          {acs.map((x) => (
-            <li
-              key={x.id}
-              className={`panel flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between ${x.lancado ? "border-success/40" : ""}`}
-            >
-              <div>
-                <p className="flex flex-wrap items-center gap-2 font-medium">
-                  {x.justificativa}
-                  {foraDoPlantao(x) && <span className="badge-extra">Fora do plantão</span>}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(x.inicio_acionamento).toLocaleString("pt-BR")} →{" "}
-                  {new Date(x.fim_acionamento!).toLocaleTimeString("pt-BR")}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`font-mono ${foraDoPlantao(x) ? "text-info" : "text-primary"}`}>
-                  {fmtDur(dur(x))}
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={!!x.lancado}
-                  aria-label={`Lançado na plataforma oficial: ${x.justificativa}`}
-                  title={x.lancado ? "Lançado na plataforma oficial" : "Marcar como lançado"}
-                  onClick={() => marcarLancado(x)}
-                  className={`toggle-lancado ${x.lancado ? "toggle-lancado-on" : ""}`}
-                >
-                  <span className="toggle-lancado-icon">
-                    {x.lancado && <Check className="h-3 w-3" strokeWidth={3} />}
-                  </span>
-                  {x.lancado ? "Lançado" : "Lançar"}
-                </button>
-                <button className="btn-ghost" onClick={() => setEdit(x)}>
-                  Editar
-                </button>
-              </div>
-            </li>
-          ))}
+          {grupos.map((grupo) => {
+            const texto = textoDoGrupo(grupo);
+            const quando = new Date(`${grupo.data}T12:00`).toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "2-digit",
+              month: "2-digit",
+            });
+            const copia = <ModeloCopia texto={texto} />;
+            return (
+              <li
+                key={grupo.id}
+                className={`panel space-y-3 ${grupo.plantao?.lancado ? "border-success/40" : ""}`}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium capitalize">{quando}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {grupo.plantao
+                        ? `${TIPO_LABEL[grupo.plantao.tipo]} · ${fmtHoras(janela(grupo.data).horas)}`
+                        : "Fora do plantão"}
+                      {grupo.chamados.length === 0 ? " · sem acionamento" : ""}
+                    </p>
+                  </div>
+                  {grupo.plantao && (
+                    <BotaoLancado
+                      on={!!grupo.plantao.lancado}
+                      label={`Dia lançado na plataforma oficial: ${grupo.data}`}
+                      onClick={() => marcarDia(grupo.plantao!)}
+                    />
+                  )}
+                </div>
+                {grupo.chamados.length === 0 ? (
+                  copia
+                ) : (
+                  <>
+                    <ul className="space-y-2">
+                      {grupo.chamados.map((x) => (
+                        <li
+                          key={x.id}
+                          className="flex flex-col gap-2 rounded-lg border border-border/60 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <p className="flex flex-wrap items-center gap-2 font-medium">
+                              {x.justificativa}
+                              {foraDoPlantao(x) && (
+                                <span className="badge-extra">Fora do plantão</span>
+                              )}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(x.inicio_acionamento).toLocaleString("pt-BR")} →{" "}
+                              {new Date(x.fim_acionamento!).toLocaleTimeString("pt-BR")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`font-mono ${foraDoPlantao(x) ? "text-info" : "text-primary"}`}
+                            >
+                              {fmtDur(dur(x))}
+                            </span>
+                            <BotaoLancado
+                              on={!!x.lancado}
+                              label={`Lançado na plataforma oficial: ${x.justificativa}`}
+                              onClick={() => marcarLancado(x)}
+                            />
+                            <button className="btn-ghost" onClick={() => setEdit(x)}>
+                              Editar
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <details className="group rounded-lg border border-border/60">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground [&::-webkit-details-marker]:hidden">
+                        Copiar lançamento
+                        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="space-y-2 border-t border-border/60 p-3">{copia}</div>
+                    </details>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
       {novo && (
@@ -273,6 +366,42 @@ function EditModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function ModeloCopia({ texto }: { texto: string }) {
+  return (
+    <div className="space-y-2">
+      <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-3 font-mono text-xs leading-relaxed text-foreground">
+        {texto}
+      </pre>
+      <button
+        type="button"
+        className="btn-ghost"
+        onClick={() => navigator.clipboard.writeText(texto)}
+      >
+        Copiar
+      </button>
+    </div>
+  );
+}
+
+function BotaoLancado({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      title={on ? "Lançado na plataforma oficial" : "Marcar como lançado"}
+      onClick={onClick}
+      className={`toggle-lancado ${on ? "toggle-lancado-on" : ""}`}
+    >
+      <span className="toggle-lancado-icon">
+        {on && <Check className="h-3 w-3" strokeWidth={3} />}
+      </span>
+      {on ? "Lançado" : "Lançar"}
+    </button>
   );
 }
 
