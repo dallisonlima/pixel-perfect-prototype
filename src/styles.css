@@ -112,6 +112,10 @@
     border-color: var(--color-border);
   }
 
+  :root {
+    color-scheme: dark;
+  }
+
   body {
     font-family: var(--font-sans);
     background-color: var(--color-background);
@@ -170,6 +174,30 @@
   }
   .badge-extra {
     @apply rounded-full bg-info/15 px-3 py-1 font-mono text-xs text-info;
+  }
+  .picker-trigger {
+    @apply flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-left text-sm outline-none transition-colors hover:border-primary/50 focus-visible:border-ring focus-within:border-ring;
+  }
+  .picker-popover {
+    @apply rounded-xl border-border bg-card p-3 shadow-2xl;
+  }
+  .picker-nav {
+    @apply flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground;
+  }
+  .picker-month {
+    @apply rounded-md py-2 text-sm capitalize text-foreground transition-colors hover:bg-secondary;
+  }
+  .picker-month-on {
+    @apply bg-primary font-semibold text-primary-foreground hover:bg-primary;
+  }
+  .picker-month-today {
+    @apply ring-1 ring-primary/50;
+  }
+  .picker-time {
+    @apply w-full bg-transparent font-mono outline-none;
+  }
+  .picker-time::-webkit-calendar-picker-indicator {
+    display: none;
   }
   .toggle-lancado {
     @apply inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 py-1 pl-1.5 pr-3 text-xs font-medium text-muted-foreground transition-colors hover:border-success/50 hover:text-foreground;

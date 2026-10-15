@@ -13,6 +13,7 @@ import {
   type Sobreaviso,
 } from "@/lib/db";
 import { EspelhoModal } from "@/components/EspelhoModal";
+import { DateTimePicker, MonthPicker } from "@/components/DatePickers";
 
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
@@ -63,12 +64,7 @@ export function Relatorios() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Relatório mensal</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="month"
-            className="field w-auto"
-            value={mes}
-            onChange={(e) => setMes(e.target.value)}
-          />
+          <MonthPicker value={mes} onChange={setMes} />
           <button
             type="button"
             className="btn-ghost flex items-center gap-1.5"
@@ -219,24 +215,14 @@ function EditModal({
             fora do plantão (azul no calendário) e o dia não é marcado como sobreaviso.
           </p>
         )}
-        <label className="block space-y-1 text-sm">
+        <div className="space-y-1 text-sm">
           <span className="text-muted-foreground">Início</span>
-          <input
-            type="datetime-local"
-            className="field"
-            value={ini}
-            onChange={(e) => setIni(e.target.value)}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
+          <DateTimePicker label="Início" value={ini} onChange={setIni} />
+        </div>
+        <div className="space-y-1 text-sm">
           <span className="text-muted-foreground">Fim</span>
-          <input
-            type="datetime-local"
-            className="field"
-            value={fim}
-            onChange={(e) => setFim(e.target.value)}
-          />
-        </label>
+          <DateTimePicker label="Fim" value={fim} onChange={setFim} />
+        </div>
         <label className="block space-y-1 text-sm">
           <span className="text-muted-foreground">Justificativa</span>
           <textarea
