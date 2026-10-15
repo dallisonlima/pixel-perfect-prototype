@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import { db, diaDoAcionamento, plantaoDoAcionamento, toISO, tipoDe } from "@/lib/db";
 
@@ -17,19 +18,27 @@ export const Route = createFileRoute("/calendario")({
 
 const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-function Calendario() {
+export function Calendario() {
   const [ref, setRef] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [avulsos, setAvulsos] = useState<Set<string>>(new Set());
+  const [lancados, setLancados] = useState<Set<string>>(new Set());
   const load = async () => {
     const [s, a] = await Promise.all([db.allSobreavisos(), db.allAcionamentos()]);
     setMarcados(new Set(s.map((x) => x.data)));
     setAvulsos(
       new Set(a.filter((x) => !plantaoDoAcionamento(s, x)).map((x) => diaDoAcionamento(s, x))),
     );
+    const porDia = new Map<string, boolean>();
+    for (const x of a) {
+      if (!x.fim_acionamento) continue;
+      const dia = diaDoAcionamento(s, x);
+      porDia.set(dia, (porDia.get(dia) ?? true) && !!x.lancado);
+    }
+    setLancados(new Set([...porDia].filter(([, ok]) => ok).map(([dia]) => dia)));
   };
   useEffect(() => {
     load();
@@ -68,6 +77,11 @@ function Calendario() {
           const iso = toISO(d);
           const on = marcados.has(iso);
           const avulso = avulsos.has(iso);
+          const lancado = lancados.has(iso);
+          const dicas = [
+            avulso && "Horas registradas fora do plantão",
+            lancado && "Lançado na plataforma oficial",
+          ].filter(Boolean);
           return (
             <button
               key={iso}
@@ -75,9 +89,14 @@ function Calendario() {
                 await db.toggleSobreaviso(iso);
                 load();
               }}
-              title={avulso ? "Horas registradas fora do plantão" : undefined}
+              title={dicas.length ? dicas.join(" · ") : undefined}
               className={`day ${on ? "day-on" : avulso ? "day-extra" : ""} ${iso === hoje ? "day-today" : ""}`}
             >
+              {lancado && (
+                <span className="day-lancado" aria-label="Lançado na plataforma oficial">
+                  <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
+                </span>
+              )}
               <span className="font-mono">{d.getDate()}</span>
               {on ? (
                 <span className="text-[10px] opacity-80">
@@ -95,14 +114,34 @@ function Calendario() {
         Toque em um dia para marcar/desmarcar. Dias úteis: 18h às 08h do dia seguinte. Sábado e
         domingo: 08h às 08h (24h).
       </p>
-      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm bg-primary" /> Plantão marcado
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm bg-info" /> Horas fora do plantão (ex: trabalho
-          agendado)
-        </span>
+      <div className="panel mt-4 space-y-3">
+        <h2 className="font-mono text-xs tracking-widest text-muted-foreground">LEGENDA</h2>
+        <ul className="grid gap-2.5 text-sm sm:grid-cols-2">
+          <li className="flex items-center gap-2.5">
+            <span className="h-4 w-4 shrink-0 rounded bg-primary" />
+            Plantão marcado
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="h-4 w-4 shrink-0 rounded bg-info" />
+            Horas fora do plantão (ex: trabalho agendado)
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success text-background">
+              <Check className="h-2.5 w-2.5" strokeWidth={3.5} />
+            </span>
+            Todos os acionamentos do dia lançados na plataforma oficial
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-info" />
+            </span>
+            Plantão com horas fora do plantão no mesmo dia
+          </li>
+          <li className="flex items-center gap-2.5">
+            <span className="h-4 w-4 shrink-0 rounded ring-2 ring-ring/50" />
+            Hoje
+          </li>
+        </ul>
       </div>
     </Shell>
   );

@@ -160,7 +160,7 @@
     @apply animate-pulse rounded-full bg-destructive/15 px-3 py-1 font-mono text-xs text-destructive;
   }
   .day {
-    @apply flex aspect-square flex-col items-center justify-center rounded-lg border border-border bg-card text-sm transition-colors hover:border-primary/60;
+    @apply relative flex aspect-square flex-col items-center justify-center rounded-lg border border-border bg-card text-sm transition-colors hover:border-primary/60;
   }
   .day-on {
     @apply border-primary bg-primary text-primary-foreground;
@@ -170,6 +170,21 @@
   }
   .badge-extra {
     @apply rounded-full bg-info/15 px-3 py-1 font-mono text-xs text-info;
+  }
+  .toggle-lancado {
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 py-1 pl-1.5 pr-3 text-xs font-medium text-muted-foreground transition-colors hover:border-success/50 hover:text-foreground;
+  }
+  .toggle-lancado-on {
+    @apply border-success/40 bg-success/15 text-success hover:text-success;
+  }
+  .toggle-lancado-icon {
+    @apply flex h-4.5 w-4.5 items-center justify-center rounded-full border border-muted-foreground/40 transition-colors;
+  }
+  .toggle-lancado-on .toggle-lancado-icon {
+    @apply border-success bg-success text-background;
+  }
+  .day-lancado {
+    @apply absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-success text-background;
   }
   .day-today {
     @apply ring-2 ring-ring/50;

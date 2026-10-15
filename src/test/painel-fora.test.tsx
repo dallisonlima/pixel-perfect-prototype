@@ -61,7 +61,7 @@ describe("painel fora do plantão", () => {
     fireEvent.click(botao);
 
     await vi.waitFor(() => expect(putAcionamento).toHaveBeenCalledOnce());
-    const salvo = putAcionamento.mock.calls[0][0];
+    const salvo = putAcionamento.mock.calls[0]![0];
     expect(salvo.sobreaviso_id).toBe(toISO(quarta15h));
     expect(salvo.fim_acionamento).toBeNull();
     expect(allSobreavisos).toHaveBeenCalledOnce();

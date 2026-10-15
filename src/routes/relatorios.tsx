@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import {
   db,
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/relatorios")({
   component: Relatorios,
 });
 
-function Relatorios() {
+export function Relatorios() {
   const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
   const [s, setS] = useState<Sobreaviso[]>([]);
   const [a, setA] = useState<Acionamento[]>([]);
@@ -50,6 +51,12 @@ function Relatorios() {
   const hSob = doMes.reduce((t, x) => t + janela(x.data).horas, 0);
   const msTrab = acs.filter((x) => !foraDoPlantao(x)).reduce((t, x) => t + dur(x), 0);
   const msExtra = acs.filter(foraDoPlantao).reduce((t, x) => t + dur(x), 0);
+  const lancados = acs.filter((x) => x.lancado).length;
+
+  const marcarLancado = async (x: Acionamento) => {
+    await db.putAcionamento({ ...x, lancado: !x.lancado });
+    load();
+  };
 
   return (
     <Shell>
@@ -81,9 +88,16 @@ function Relatorios() {
         <Stat label="Horas acionadas" value={fmtHoras(msTrab / 3.6e6)} accent="primary" />
         <Stat label="Fora do plantão" value={fmtHoras(msExtra / 3.6e6)} accent="info" />
       </div>
-      <h2 className="mb-3 mt-10 font-mono text-xs tracking-widest text-muted-foreground">
-        HISTÓRICO DE ACIONAMENTOS
-      </h2>
+      <div className="mb-3 mt-10 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
+          HISTÓRICO DE ACIONAMENTOS
+        </h2>
+        {acs.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {lancados} de {acs.length} lançados na plataforma oficial
+          </p>
+        )}
+      </div>
       {acs.length === 0 ? (
         <p className="text-muted-foreground">Nenhum acionamento neste mês.</p>
       ) : (
@@ -91,7 +105,7 @@ function Relatorios() {
           {acs.map((x) => (
             <li
               key={x.id}
-              className="panel flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+              className={`panel flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between ${x.lancado ? "border-success/40" : ""}`}
             >
               <div>
                 <p className="flex flex-wrap items-center gap-2 font-medium">
@@ -107,6 +121,20 @@ function Relatorios() {
                 <span className={`font-mono ${foraDoPlantao(x) ? "text-info" : "text-primary"}`}>
                   {fmtDur(dur(x))}
                 </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!x.lancado}
+                  aria-label={`Lançado na plataforma oficial: ${x.justificativa}`}
+                  title={x.lancado ? "Lançado na plataforma oficial" : "Marcar como lançado"}
+                  onClick={() => marcarLancado(x)}
+                  className={`toggle-lancado ${x.lancado ? "toggle-lancado-on" : ""}`}
+                >
+                  <span className="toggle-lancado-icon">
+                    {x.lancado && <Check className="h-3 w-3" strokeWidth={3} />}
+                  </span>
+                  {x.lancado ? "Lançado" : "Lançar"}
+                </button>
                 <button className="btn-ghost" onClick={() => setEdit(x)}>
                   Editar
                 </button>
@@ -248,6 +276,7 @@ function EditModal({
                   inicio_acionamento: i,
                   fim_acionamento: f,
                   justificativa: just.trim(),
+                  ...(ac?.lancado ? { lancado: true } : {}),
                 });
                 onSaved();
               }}

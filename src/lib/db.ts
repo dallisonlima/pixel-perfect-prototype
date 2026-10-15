@@ -11,6 +11,8 @@ export interface Acionamento {
   inicio_acionamento: number;
   fim_acionamento: number | null;
   justificativa: string;
+  /** Já lançado na plataforma oficial. Ausente nos registros antigos. */
+  lancado?: boolean;
 }
 
 export interface UsuarioLocal {
