@@ -67,8 +67,6 @@ export const db = {
   putAcionamento: async (a: Acionamento) => req((await store("acionamentos", "readwrite")).put(a)),
   deleteAcionamento: async (id: string) =>
     req((await store("acionamentos", "readwrite")).delete(id)),
-  ensureSobreaviso: async (data: string) =>
-    req((await store("sobreavisos", "readwrite")).put({ id: data, data, tipo: tipoDe(data) })),
   getUsuario: async () => {
     const all = await req<UsuarioLocal[]>((await store("usuarios")).getAll());
     return all[0] ?? null;
@@ -121,6 +119,16 @@ export function sobreavisoAtivo(list: Sobreaviso[], now = new Date()) {
     const j = janela(s.data);
     return now >= j.inicio && now < j.fim;
   });
+}
+// Acionamentos que começam fora de qualquer plantão marcado são trabalho avulso (ex: agendado)
+export function plantaoDoAcionamento(
+  list: Sobreaviso[],
+  a: Pick<Acionamento, "inicio_acionamento">,
+) {
+  return sobreavisoAtivo(list, new Date(a.inicio_acionamento));
+}
+export function diaDoAcionamento(list: Sobreaviso[], a: Pick<Acionamento, "inicio_acionamento">) {
+  return plantaoDoAcionamento(list, a)?.data ?? toISO(new Date(a.inicio_acionamento));
 }
 export function fmtDur(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));

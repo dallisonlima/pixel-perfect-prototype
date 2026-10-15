@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
-import { db, toISO, tipoDe } from "@/lib/db";
+import { db, diaDoAcionamento, plantaoDoAcionamento, toISO, tipoDe } from "@/lib/db";
 
 export const Route = createFileRoute("/calendario")({
   head: () => ({
@@ -23,7 +23,14 @@ function Calendario() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
-  const load = async () => setMarcados(new Set((await db.allSobreavisos()).map((s) => s.data)));
+  const [avulsos, setAvulsos] = useState<Set<string>>(new Set());
+  const load = async () => {
+    const [s, a] = await Promise.all([db.allSobreavisos(), db.allAcionamentos()]);
+    setMarcados(new Set(s.map((x) => x.data)));
+    setAvulsos(
+      new Set(a.filter((x) => !plantaoDoAcionamento(s, x)).map((x) => diaDoAcionamento(s, x))),
+    );
+  };
   useEffect(() => {
     load();
   }, []);
@@ -60,6 +67,7 @@ function Calendario() {
           if (!d) return <div key={i} />;
           const iso = toISO(d);
           const on = marcados.has(iso);
+          const avulso = avulsos.has(iso);
           return (
             <button
               key={iso}
@@ -67,13 +75,17 @@ function Calendario() {
                 await db.toggleSobreaviso(iso);
                 load();
               }}
-              className={`day ${on ? "day-on" : ""} ${iso === hoje ? "day-today" : ""}`}
+              title={avulso ? "Horas registradas fora do plantão" : undefined}
+              className={`day ${on ? "day-on" : avulso ? "day-extra" : ""} ${iso === hoje ? "day-today" : ""}`}
             >
               <span className="font-mono">{d.getDate()}</span>
-              {on && (
+              {on ? (
                 <span className="text-[10px] opacity-80">
                   {tipoDe(iso) === "dia_semana" ? "18–08" : "24h"}
+                  {avulso && <span className="ml-1 text-info">●</span>}
                 </span>
+              ) : (
+                avulso && <span className="text-[10px] opacity-80">extra</span>
               )}
             </button>
           );
@@ -83,6 +95,15 @@ function Calendario() {
         Toque em um dia para marcar/desmarcar. Dias úteis: 18h às 08h do dia seguinte. Sábado e
         domingo: 08h às 08h (24h).
       </p>
+      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm bg-primary" /> Plantão marcado
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm bg-info" /> Horas fora do plantão (ex: trabalho
+          agendado)
+        </span>
+      </div>
     </Shell>
   );
 }

@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
 import {
   db,
-  diaDoPlantao,
+  diaDoAcionamento,
+  plantaoDoAcionamento,
   janela,
   fmtDur,
   fmtHoras,
@@ -41,12 +42,14 @@ function Relatorios() {
   }, []);
 
   const doMes = s.filter((x) => x.data.startsWith(mes));
-  const ids = new Set(doMes.map((x) => x.id));
   const acs = a
-    .filter((x) => ids.has(x.sobreaviso_id) && x.fim_acionamento)
+    .filter((x) => x.fim_acionamento && diaDoAcionamento(s, x).startsWith(mes))
     .sort((p, q) => p.inicio_acionamento - q.inicio_acionamento);
+  const foraDoPlantao = (x: Acionamento) => !plantaoDoAcionamento(s, x);
+  const dur = (x: Acionamento) => x.fim_acionamento! - x.inicio_acionamento;
   const hSob = doMes.reduce((t, x) => t + janela(x.data).horas, 0);
-  const msTrab = acs.reduce((t, x) => t + (x.fim_acionamento! - x.inicio_acionamento), 0);
+  const msTrab = acs.filter((x) => !foraDoPlantao(x)).reduce((t, x) => t + dur(x), 0);
+  const msExtra = acs.filter(foraDoPlantao).reduce((t, x) => t + dur(x), 0);
 
   return (
     <Shell>
@@ -72,10 +75,11 @@ function Relatorios() {
           </button>
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Dias de sobreaviso" value={String(doMes.length)} />
         <Stat label="Horas em sobreaviso" value={fmtHoras(hSob)} />
-        <Stat label="Horas acionadas" value={fmtHoras(msTrab / 3.6e6)} accent />
+        <Stat label="Horas acionadas" value={fmtHoras(msTrab / 3.6e6)} accent="primary" />
+        <Stat label="Fora do plantão" value={fmtHoras(msExtra / 3.6e6)} accent="info" />
       </div>
       <h2 className="mb-3 mt-10 font-mono text-xs tracking-widest text-muted-foreground">
         HISTÓRICO DE ACIONAMENTOS
@@ -90,15 +94,18 @@ function Relatorios() {
               className="panel flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="font-medium">{x.justificativa}</p>
+                <p className="flex flex-wrap items-center gap-2 font-medium">
+                  {x.justificativa}
+                  {foraDoPlantao(x) && <span className="badge-extra">Fora do plantão</span>}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {new Date(x.inicio_acionamento).toLocaleString("pt-BR")} →{" "}
                   {new Date(x.fim_acionamento!).toLocaleTimeString("pt-BR")}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-primary">
-                  {fmtDur(x.fim_acionamento! - x.inicio_acionamento)}
+                <span className={`font-mono ${foraDoPlantao(x) ? "text-info" : "text-primary"}`}>
+                  {fmtDur(dur(x))}
                 </span>
                 <button className="btn-ghost" onClick={() => setEdit(x)}>
                   Editar
@@ -111,6 +118,7 @@ function Relatorios() {
       {novo && (
         <EditModal
           ac={null}
+          sobreavisos={s}
           onClose={() => setNovo(false)}
           onSaved={() => {
             setNovo(false);
@@ -121,6 +129,7 @@ function Relatorios() {
       {edit && (
         <EditModal
           ac={edit}
+          sobreavisos={s}
           onClose={() => setEdit(null)}
           onSaved={() => {
             setEdit(null);
@@ -130,7 +139,7 @@ function Relatorios() {
       )}
       {espelho && (
         <EspelhoModal
-          sobreavisos={doMes}
+          sobreavisos={s}
           acionamentos={a}
           mesFormatado={mes}
           onClose={() => setEspelho(false)}
@@ -148,10 +157,12 @@ const toLocal = (ms: number) => {
 
 function EditModal({
   ac,
+  sobreavisos,
   onClose,
   onSaved,
 }: {
   ac: Acionamento | null;
+  sobreavisos: Sobreaviso[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -176,7 +187,8 @@ function EditModal({
         </h2>
         {!ac && (
           <p className="text-sm text-muted-foreground">
-            Se o dia não estiver marcado como sobreaviso, ele será marcado automaticamente.
+            Se o horário não estiver dentro de um plantão marcado, as horas ficam registradas como
+            fora do plantão (azul no calendário) e o dia não é marcado como sobreaviso.
           </p>
         )}
         <label className="block space-y-1 text-sm">
@@ -230,11 +242,9 @@ function EditModal({
               className="btn-primary"
               disabled={!!erro}
               onClick={async () => {
-                const dia = diaDoPlantao(i);
-                await db.ensureSobreaviso(dia);
                 await db.putAcionamento({
                   id: ac?.id ?? crypto.randomUUID(),
-                  sobreaviso_id: dia,
+                  sobreaviso_id: diaDoAcionamento(sobreavisos, { inicio_acionamento: i }),
                   inicio_acionamento: i,
                   fim_acionamento: f,
                   justificativa: just.trim(),
@@ -251,11 +261,20 @@ function EditModal({
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: "primary" | "info";
+}) {
+  const cor = accent === "primary" ? "text-primary" : accent === "info" ? "text-info" : "";
   return (
     <div className="panel">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`mt-1 font-mono text-3xl ${accent ? "text-primary" : ""}`}>{value}</p>
+      <p className={`mt-1 font-mono text-3xl ${cor}`}>{value}</p>
     </div>
   );
 }

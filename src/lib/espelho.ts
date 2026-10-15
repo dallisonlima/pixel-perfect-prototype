@@ -1,4 +1,12 @@
-import { tipoDe, parseDate, toISO, type Sobreaviso, type Acionamento } from "./db";
+import {
+  tipoDe,
+  parseDate,
+  toISO,
+  janela,
+  plantaoDoAcionamento,
+  type Sobreaviso,
+  type Acionamento,
+} from "./db";
 
 export interface LinhaEspelho {
   inicio: string; // "18:00"
@@ -24,6 +32,7 @@ export interface PlantaoEspelho {
   dias: DiaEspelho[];
   linhas: LinhaEspelho[];
   textoFormatado: string;
+  foraDoPlantao: boolean;
 }
 
 export function fmtMinute(m: number): string {
@@ -130,12 +139,13 @@ export function gerarEspelhoPlantao(
 
   const d2Date = new Date(midnight);
 
-  // Filtra acionamentos concluídos pertencentes a este plantão
-  const acs = todosAcionamentos.filter((a) => {
-    if (!a.fim_acionamento) return false;
-    if (a.sobreaviso_id === sobreaviso.id) return true;
-    return a.inicio_acionamento >= d1Start.getTime() && a.inicio_acionamento < d2End.getTime();
-  });
+  // Só acionamentos que começam dentro deste plantão. Os demais vão para o bloco fora do plantão.
+  const acs = todosAcionamentos.filter(
+    (a) =>
+      a.fim_acionamento !== null &&
+      a.inicio_acionamento >= d1Start.getTime() &&
+      a.inicio_acionamento < d2End.getTime(),
+  );
 
   const day1StartMin = tipo === "dia_semana" ? 18 * 60 : 8 * 60;
   const day1EndMin = 23 * 60 + 59; // 23:59
@@ -209,14 +219,120 @@ export function gerarEspelhoPlantao(
     dias,
     linhas: todasLinhas,
     textoFormatado,
+    foraDoPlantao: false,
   };
 }
 
-export function gerarEspelhoMes(
+function linhaTrabalhada(inicio: Date, fim: Date, desc: string): LinhaEspelho {
+  const ini = fmtMinute(inicio.getHours() * 60 + inicio.getMinutes());
+  const acabouNaVirada =
+    fim.getHours() === 0 && fim.getMinutes() === 0 && fim.getSeconds() === 0 && fim > inicio;
+  const fimMin = acabouNaVirada ? 23 * 60 + 59 : fim.getHours() * 60 + fim.getMinutes();
+  const horaFim = fmtMinute(fimMin);
+  const descricao = desc.trim() || "Acionamento";
+  return {
+    inicio: ini,
+    fim: horaFim,
+    descricao,
+    tipo: "acionamento",
+    texto: `${ini} -> ${horaFim} = ${descricao}`,
+  };
+}
+
+// Quebra na meia-noite no mesmo formato do plantão (23:59 e continua 00:00), sem faixas de sobreaviso.
+function trechosTrabalhados(inicioMs: number, fimMs: number, desc: string) {
+  const partes: { data: string; linha: LinhaEspelho }[] = [];
+  let cursor = new Date(inicioMs);
+  const fim = new Date(fimMs);
+  while (cursor < fim) {
+    const virada = new Date(cursor);
+    virada.setDate(virada.getDate() + 1);
+    virada.setHours(0, 0, 0, 0);
+    const ate = fim < virada ? fim : virada;
+    partes.push({ data: toISO(cursor), linha: linhaTrabalhada(cursor, ate, desc) });
+    cursor = ate;
+  }
+  return partes;
+}
+
+export function gerarEspelhoForaDoPlantao(
   sobreavisos: Sobreaviso[],
   todosAcionamentos: Acionamento[],
 ): PlantaoEspelho[] {
-  // Ordena por data crescente
-  const ordenados = [...sobreavisos].sort((a, b) => a.data.localeCompare(b.data));
-  return ordenados.map((s) => gerarEspelhoPlantao(s, todosAcionamentos));
+  const grupos = new Map<
+    string,
+    { ordem: number; partes: { data: string; linha: LinhaEspelho }[] }
+  >();
+
+  const avulsos = todosAcionamentos
+    .filter((ac) => ac.fim_acionamento && !plantaoDoAcionamento(sobreavisos, ac))
+    .sort((a, b) => a.inicio_acionamento - b.inicio_acionamento);
+
+  for (const ac of avulsos) {
+    const dia = toISO(new Date(ac.inicio_acionamento));
+    const grupo = grupos.get(dia) ?? { ordem: ac.inicio_acionamento, partes: [] };
+    grupo.ordem = Math.min(grupo.ordem, ac.inicio_acionamento);
+    grupo.partes.push(
+      ...trechosTrabalhados(ac.inicio_acionamento, ac.fim_acionamento!, ac.justificativa),
+    );
+    grupos.set(dia, grupo);
+  }
+
+  return [...grupos.entries()]
+    .sort(([, a], [, b]) => a.ordem - b.ordem)
+    .map(([dia, grupo]) => {
+      const datas = [...new Set(grupo.partes.map((p) => p.data))].sort();
+      const dias: DiaEspelho[] = datas.map((data) => {
+        const d = parseDate(data);
+        return {
+          data,
+          dataFormatada: formatarDataBR(d),
+          diaSemana: DIAS_SEMANA[d.getDay()] ?? "",
+          linhas: grupo.partes.filter((p) => p.data === data).map((p) => p.linha),
+        };
+      });
+      const linhas = dias.flatMap((d) => d.linhas);
+      const inicio = dias[0]!;
+      const ultimo = dias[dias.length - 1]!;
+      const titulo =
+        datas.length > 1
+          ? `Fora do plantão de ${inicio.dataFormatada} a ${ultimo.dataFormatada}`
+          : `Fora do plantão · ${inicio.dataFormatada}`;
+      return {
+        id: `fora-${dia}`,
+        dataPlantao: dia,
+        dataInicioFormatada: inicio.dataFormatada,
+        dataFimFormatada: ultimo.dataFormatada,
+        titulo,
+        dias,
+        linhas,
+        textoFormatado: linhas.map((l) => l.texto).join("\n"),
+        foraDoPlantao: true,
+      };
+    });
+}
+
+// `mes` ("YYYY-MM") limita os plantões e o trabalho fora do plantão ao mês do relatório.
+// A classificação usa todos os plantões, para não confundir a madrugada de um plantão do mês anterior.
+export function gerarEspelhoMes(
+  sobreavisos: Sobreaviso[],
+  todosAcionamentos: Acionamento[],
+  mes?: string,
+): PlantaoEspelho[] {
+  const doMes = (iso: string) => !mes || iso.startsWith(mes);
+  const plantoes = [...sobreavisos]
+    .filter((s) => doMes(s.data))
+    .sort((a, b) => a.data.localeCompare(b.data))
+    .map((s) => ({
+      ordem: janela(s.data).inicio.getTime(),
+      espelho: gerarEspelhoPlantao(s, todosAcionamentos),
+    }));
+  const fora = gerarEspelhoForaDoPlantao(sobreavisos, todosAcionamentos)
+    .filter((espelho) => doMes(espelho.dataPlantao))
+    .map((espelho) => ({
+      ordem: parseDate(espelho.dataPlantao).getTime(),
+      espelho,
+    }));
+  // Fora do plantão no mesmo dia civil vem antes do plantão, que começa à noite.
+  return [...plantoes, ...fora].sort((a, b) => a.ordem - b.ordem).map((x) => x.espelho);
 }

@@ -28,6 +28,8 @@
   --radius-4xl: calc(var(--radius) + 16px);
   --color-background: var(--background);
   --color-success: var(--success);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --color-foreground: var(--foreground);
@@ -83,6 +85,8 @@
   --destructive: oklch(0.64 0.21 25);
   --destructive-foreground: oklch(0.98 0 0);
   --success: oklch(0.75 0.15 155);
+  --info: oklch(0.68 0.15 245);
+  --info-foreground: oklch(0.98 0.01 245);
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.8 0.16 75);
@@ -156,6 +160,12 @@
   }
   .day-on {
     @apply border-primary bg-primary text-primary-foreground;
+  }
+  .day-extra {
+    @apply border-info bg-info text-info-foreground;
+  }
+  .badge-extra {
+    @apply rounded-full bg-info/15 px-3 py-1 font-mono text-xs text-info;
   }
   .day-today {
     @apply ring-2 ring-ring/50;

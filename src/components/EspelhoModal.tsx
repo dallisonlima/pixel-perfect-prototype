@@ -21,8 +21,8 @@ export function EspelhoModal({
 
   // Gera o espelho para todos os plantões do mês
   const plantoes: PlantaoEspelho[] = useMemo(() => {
-    return gerarEspelhoMes(sobreavisos, acionamentos);
-  }, [sobreavisos, acionamentos]);
+    return gerarEspelhoMes(sobreavisos, acionamentos, mesFormatado);
+  }, [sobreavisos, acionamentos, mesFormatado]);
 
   // Permite selecionar um plantão específico ou todos
   const [selecao, setSelecao] = useState<string>("todos");
@@ -103,7 +103,7 @@ export function EspelhoModal({
         {plantoes.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-border bg-secondary/30 px-4 py-2.5 sm:px-5">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Plantão:</span>
+              <span className="text-xs font-medium text-muted-foreground">Período:</span>
               <select
                 className="field h-8 w-auto py-1 text-xs sm:text-sm"
                 value={selecao}
@@ -114,7 +114,7 @@ export function EspelhoModal({
                 )}
                 {plantoes.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.dataInicioFormatada} → {p.dataFimFormatada}
+                    {p.titulo}
                   </option>
                 ))}
               </select>
@@ -163,9 +163,11 @@ export function EspelhoModal({
             <div className="space-y-4">
               {plantoesFiltrados.map((p) => (
                 <div key={p.id} className="space-y-2">
-                  {plantoesFiltrados.length > 1 && (
+                  {(plantoesFiltrados.length > 1 || p.foraDoPlantao) && (
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-semibold text-primary">
+                      <span
+                        className={`font-mono text-xs font-semibold ${p.foraDoPlantao ? "text-info" : "text-primary"}`}
+                      >
                         ● {p.titulo}
                       </span>
                       <button
@@ -180,7 +182,11 @@ export function EspelhoModal({
                       </button>
                     </div>
                   )}
-                  <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 font-mono text-xs leading-relaxed text-foreground sm:text-sm">
+                  <pre
+                    className={`overflow-x-auto rounded-lg border bg-background/80 p-4 font-mono text-xs leading-relaxed sm:text-sm ${
+                      p.foraDoPlantao ? "border-info/40 text-info" : "border-border text-foreground"
+                    }`}
+                  >
                     {p.textoFormatado}
                   </pre>
                 </div>
@@ -189,9 +195,16 @@ export function EspelhoModal({
           ) : (
             <div className="space-y-6">
               {plantoesFiltrados.map((p) => (
-                <div key={p.id} className="rounded-lg border border-border bg-background/50 p-4">
+                <div
+                  key={p.id}
+                  className={`rounded-lg border bg-background/50 p-4 ${p.foraDoPlantao ? "border-info/40" : "border-border"}`}
+                >
                   <div className="mb-4 flex items-center justify-between border-b border-border/60 pb-2">
-                    <h3 className="font-semibold text-primary">{p.titulo}</h3>
+                    <h3
+                      className={`font-semibold ${p.foraDoPlantao ? "text-info" : "text-primary"}`}
+                    >
+                      {p.titulo}
+                    </h3>
                     <span className="font-mono text-xs text-muted-foreground">
                       {p.linhas.filter((l) => l.tipo === "acionamento").length} acionamento(s)
                     </span>
@@ -204,43 +217,53 @@ export function EspelhoModal({
                           <span>
                             {d.dataFormatada} · {d.diaSemana}
                           </span>
-                          <span className="font-mono text-[11px]">
-                            {dIdx === 0 ? "até 23:59" : "a partir de 00:00"}
-                          </span>
+                          {p.dias.length > 1 && (
+                            <span className="font-mono text-[11px]">
+                              {dIdx === 0 ? "até 23:59" : "a partir de 00:00"}
+                            </span>
+                          )}
                         </div>
 
                         <div className="space-y-1.5">
-                          {d.linhas.map((l, lIdx) => (
-                            <div
-                              key={lIdx}
-                              className={`flex items-center justify-between rounded-md px-3 py-2 text-xs sm:text-sm ${
-                                l.tipo === "acionamento"
-                                  ? "border border-primary/30 bg-primary/10 text-primary-foreground font-medium"
-                                  : "border border-border/40 bg-secondary/30 text-muted-foreground"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Clock
-                                  className={`h-3.5 w-3.5 ${l.tipo === "acionamento" ? "text-primary" : "text-muted-foreground"}`}
-                                />
-                                <span className="font-mono font-semibold">
-                                  {l.inicio} → {l.fim}
+                          {d.linhas.map((l, lIdx) => {
+                            const trabalho = l.tipo === "acionamento";
+                            const cor = p.foraDoPlantao ? "info" : "primary";
+                            return (
+                              <div
+                                key={lIdx}
+                                className={`flex items-center justify-between rounded-md px-3 py-2 text-xs sm:text-sm ${
+                                  !trabalho
+                                    ? "border border-border/40 bg-secondary/30 text-muted-foreground"
+                                    : cor === "info"
+                                      ? "border border-info/40 bg-info/10 font-medium"
+                                      : "border border-primary/30 bg-primary/10 font-medium"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Clock
+                                    className={`h-3.5 w-3.5 ${!trabalho ? "text-muted-foreground" : cor === "info" ? "text-info" : "text-primary"}`}
+                                  />
+                                  <span className="font-mono font-semibold">
+                                    {l.inicio} -&gt; {l.fim}
+                                  </span>
+                                </div>
+                                <span
+                                  className={
+                                    !trabalho
+                                      ? "text-right"
+                                      : cor === "info"
+                                        ? "text-right font-semibold text-info"
+                                        : "text-right font-semibold text-primary"
+                                  }
+                                >
+                                  {l.descricao}
                                 </span>
                               </div>
-                              <span
-                                className={
-                                  l.tipo === "acionamento"
-                                    ? "text-primary font-semibold text-right"
-                                    : "text-right"
-                                }
-                              >
-                                {l.descricao}
-                              </span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
 
-                        {dIdx === 0 && (
+                        {dIdx === 0 && p.dias.length > 1 && (
                           <div className="my-3 flex items-center gap-2 text-[11px] text-muted-foreground">
                             <div className="h-px flex-1 bg-border/60" />
                             <span className="font-mono">
