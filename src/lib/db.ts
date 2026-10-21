@@ -1,3 +1,5 @@
+import type { Backup } from "./backup";
+
 // IndexedDB local (100% client-side) — stores: sobreavisos, acionamentos
 export type Tipo = "dia_semana" | "sabado" | "domingo";
 export interface Sobreaviso {
@@ -92,6 +94,30 @@ export const db = {
     const salvo = await db.getUsuario();
     if (!salvo || salvo.usuario !== usuario.trim()) return false;
     return salvo.senhaHash === (await hashSenha(senha));
+  },
+  exportar: async (): Promise<Backup> => ({
+    app: "ponto-sobreaviso",
+    versao: 1,
+    exportadoEm: new Date().toISOString(),
+    sobreavisos: await db.allSobreavisos(),
+    acionamentos: await db.allAcionamentos(),
+    usuario: await db.getUsuario(),
+  }),
+  importar: async (backup: Backup) => {
+    const t = (await open()).transaction(["sobreavisos", "acionamentos", "usuarios"], "readwrite");
+    const sobreavisos = t.objectStore("sobreavisos");
+    const acionamentos = t.objectStore("acionamentos");
+    const usuarios = t.objectStore("usuarios");
+    await req(sobreavisos.clear());
+    await req(acionamentos.clear());
+    await req(usuarios.clear());
+    for (const item of backup.sobreavisos) await req(sobreavisos.put(item));
+    for (const item of backup.acionamentos) await req(acionamentos.put(item));
+    if (backup.usuario) await req(usuarios.put(backup.usuario));
+    await new Promise<void>((res, rej) => {
+      t.oncomplete = () => res();
+      t.onerror = () => rej(t.error);
+    });
   },
 };
 

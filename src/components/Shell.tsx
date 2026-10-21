@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { LogOut, Settings } from "lucide-react";
+import { lerBackup } from "@/lib/backup";
 import { db } from "@/lib/db";
 
 const links = [
@@ -19,7 +21,8 @@ function AvisoLocal() {
       </p>
       <p>
         Se o cache, os dados do site ou o armazenamento deste navegador forem limpos, o usuário, a
-        senha e todos os registros de ponto serão apagados.
+        senha e todos os registros de ponto serão apagados. Em Ajustes dá para baixar uma cópia e
+        importar de novo.
       </p>
     </div>
   );
@@ -127,6 +130,96 @@ function Acesso({ onOk }: { onOk: () => void }) {
   );
 }
 
+function Ajustes() {
+  const [aberto, setAberto] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [erro, setErro] = useState("");
+  const arquivo = useRef<HTMLInputElement>(null);
+
+  const baixar = async () => {
+    setErro("");
+    const dados = await db.exportar();
+    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ponto-sobreaviso-${dados.exportadoEm.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMsg("Cópia baixada. Guarde o arquivo para restaurar depois.");
+  };
+
+  const importar = async (file: File) => {
+    setErro("");
+    setMsg("");
+    try {
+      const backup = lerBackup(await file.text());
+      const ok = confirm(
+        "Isso substitui os plantões, acionamentos e o usuário deste navegador pela cópia do arquivo.",
+      );
+      if (!ok) return;
+      await db.importar(backup);
+      window.location.reload();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Não foi possível importar.");
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="nav-icon nav-icon-info"
+        aria-label="Ajustes"
+        onClick={() => setAberto(true)}
+      >
+        <Settings className="h-4 w-4" />
+        <span className="nav-tip" aria-hidden="true">
+          Ajustes
+        </span>
+      </button>
+      {aberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur">
+          <div className="panel w-full max-w-md space-y-4 text-left">
+            <h2 className="text-xl font-semibold">Ajustes</h2>
+            <p className="text-sm text-muted-foreground">
+              Baixe uma cópia para levar os dados a outro navegador ou restaurar depois de limpar o
+              cache. O arquivo inclui plantões, acionamentos e o usuário local. A senha em texto não
+              entra no arquivo.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-primary" onClick={baixar}>
+                Baixar dados
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => arquivo.current?.click()}>
+                Importar dados
+              </button>
+              <input
+                ref={arquivo}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void importar(file);
+                }}
+              />
+            </div>
+            {msg && <p className="text-sm text-success">{msg}</p>}
+            {erro && <p className="text-sm text-destructive">{erro}</p>}
+            <div className="flex justify-end">
+              <button type="button" className="btn-ghost" onClick={() => setAberto(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<boolean | null>(null);
   useEffect(() => {
@@ -166,14 +259,21 @@ export function Shell({ children }: { children: ReactNode }) {
                 {l.label}
               </Link>
             ))}
+            <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+            <Ajustes />
             <button
-              className="nav-link"
+              type="button"
+              className="nav-icon nav-icon-danger"
+              aria-label="Sair"
               onClick={() => {
                 window.localStorage.removeItem(KEY);
                 setAuth(false);
               }}
             >
-              Sair
+              <LogOut className="h-4 w-4" />
+              <span className="nav-tip" aria-hidden="true">
+                Sair
+              </span>
             </button>
           </nav>
         </div>

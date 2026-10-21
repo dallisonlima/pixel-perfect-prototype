@@ -1,16 +1,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUsuario = vi.fn();
 const criarUsuario = vi.fn();
 const verificarLogin = vi.fn();
+const exportar = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   db: {
     getUsuario: (...args: unknown[]) => getUsuario(...args),
     criarUsuario: (...args: unknown[]) => criarUsuario(...args),
     verificarLogin: (...args: unknown[]) => verificarLogin(...args),
+    exportar: (...args: unknown[]) => exportar(...args),
   },
 }));
 
@@ -26,6 +28,11 @@ describe("acesso local", () => {
     getUsuario.mockReset();
     criarUsuario.mockReset();
     verificarLogin.mockReset();
+    exportar.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("pede para criar o usuário no primeiro acesso e explica o uso local", async () => {
@@ -91,5 +98,34 @@ describe("acesso local", () => {
 
     expect(await screen.findByRole("heading", { name: "Criar usuário local" })).toBeInTheDocument();
     expect(window.localStorage.getItem("sobreaviso-auth")).toBeNull();
+  });
+
+  it("baixa uma cópia dos dados em Ajustes", async () => {
+    window.localStorage.setItem("sobreaviso-auth", "1");
+    getUsuario.mockResolvedValue({ usuario: "ana", senhaHash: "x" });
+    exportar.mockResolvedValue({
+      app: "ponto-sobreaviso",
+      versao: 1,
+      exportadoEm: "2026-10-21T00:00:00.000Z",
+      sobreavisos: [],
+      acionamentos: [],
+      usuario: null,
+    });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:copia");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    render(
+      <Shell>
+        <p>painel</p>
+      </Shell>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ajustes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Baixar dados" }));
+
+    await waitFor(() => expect(exportar).toHaveBeenCalledOnce());
+    expect(click).toHaveBeenCalled();
+    expect(screen.getByText(/Cópia baixada/)).toBeInTheDocument();
   });
 });
