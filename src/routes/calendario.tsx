@@ -103,7 +103,7 @@ export function Calendario() {
               <span className="font-mono">{d.getDate()}</span>
               {on ? (
                 <span className="text-[10px] opacity-80">
-                  {tipoDe(iso) === "dia_semana" ? "18–08" : "24h"}
+                  {tipoDe(iso) === "dia_semana" ? "19–08" : "24h"}
                   {avulso && <span className="ml-1 text-info">●</span>}
                 </span>
               ) : (
@@ -114,7 +114,7 @@ export function Calendario() {
         })}
       </div>
       <p className="mt-6 text-sm text-muted-foreground">
-        Toque em um dia para marcar/desmarcar. Dias úteis: 18h às 08h do dia seguinte. Sábado e
+        Toque em um dia para marcar/desmarcar. Dias úteis: 19h às 08h do dia seguinte. Sábado e
         domingo: 08h às 08h (24h).
       </p>
       <div className="panel mt-4 space-y-3">

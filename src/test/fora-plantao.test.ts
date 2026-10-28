@@ -14,7 +14,7 @@ const em = (iso: string, h: number, m = 0) => {
   return d.getTime();
 };
 
-// 2026-10-08 é quinta-feira (plantão 18h → 08h do dia 09)
+// 2026-10-08 é quinta-feira (plantão 19h → 08h do dia 09)
 const plantao: Sobreaviso = { id: "2026-10-08", data: "2026-10-08", tipo: "dia_semana" };
 
 describe("acionamento fora do plantão", () => {
@@ -56,7 +56,7 @@ describe("acionamento fora do plantão", () => {
     const espelho = gerarEspelhoPlantao(plantao, [agendado]);
 
     expect(espelho.linhas.map((l) => l.texto)).toEqual([
-      "18:00 -> 23:59 = Sobreaviso",
+      "19:00 -> 23:59 = Sobreaviso",
       "00:00 -> 07:59 = Sobreaviso",
     ]);
   });

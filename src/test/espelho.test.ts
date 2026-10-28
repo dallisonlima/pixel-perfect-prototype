@@ -15,7 +15,7 @@ describe("Espelho de Plantão", () => {
     const d2 = parseDate("2026-10-09");
 
     const ac1Ini = new Date(d1);
-    ac1Ini.setHours(18, 51, 0, 0);
+    ac1Ini.setHours(19, 51, 0, 0);
     const ac1Fim = new Date(d1);
     ac1Fim.setHours(20, 20, 0, 0);
 
@@ -44,8 +44,8 @@ describe("Espelho de Plantão", () => {
     const espelho = gerarEspelhoPlantao(sobreaviso, acionamentos);
 
     expect(espelho.linhas.map((l) => l.texto)).toEqual([
-      "18:00 -> 18:50 = Sobreaviso",
-      "18:51 -> 20:20 = Problema no banco de dados",
+      "19:00 -> 19:50 = Sobreaviso",
+      "19:51 -> 20:20 = Problema no banco de dados",
       "20:21 -> 23:59 = Sobreaviso",
       "00:00 -> 00:45 = Sobreaviso",
       "00:46 -> 01:30 = Erro no serviço de autenticação",
@@ -53,8 +53,8 @@ describe("Espelho de Plantão", () => {
     ]);
 
     expect(espelho.textoFormatado).toBe(
-      "18:00 -> 18:50 = Sobreaviso\n" +
-        "18:51 -> 20:20 = Problema no banco de dados\n" +
+      "19:00 -> 19:50 = Sobreaviso\n" +
+        "19:51 -> 20:20 = Problema no banco de dados\n" +
         "20:21 -> 23:59 = Sobreaviso\n" +
         "00:00 -> 00:45 = Sobreaviso\n" +
         "00:46 -> 01:30 = Erro no serviço de autenticação\n" +
@@ -72,7 +72,7 @@ describe("Espelho de Plantão", () => {
     const espelho = gerarEspelhoPlantao(sobreaviso, []);
 
     expect(espelho.linhas.map((l) => l.texto)).toEqual([
-      "18:00 -> 23:59 = Sobreaviso",
+      "19:00 -> 23:59 = Sobreaviso",
       "00:00 -> 07:59 = Sobreaviso",
     ]);
   });
@@ -105,7 +105,7 @@ describe("Espelho de Plantão", () => {
     const espelho = gerarEspelhoPlantao(sobreaviso, acionamentos);
 
     expect(espelho.linhas.map((l) => l.texto)).toEqual([
-      "18:00 -> 23:29 = Sobreaviso",
+      "19:00 -> 23:29 = Sobreaviso",
       "23:30 -> 23:59 = Incidente crítico",
       "00:00 -> 01:15 = Incidente crítico",
       "01:16 -> 07:59 = Sobreaviso",

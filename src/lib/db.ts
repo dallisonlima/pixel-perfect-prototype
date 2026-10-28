@@ -144,7 +144,7 @@ export function janela(iso: string) {
   const d = parseDate(iso);
   const t = tipoDe(iso);
   const inicio = new Date(d);
-  inicio.setHours(t === "dia_semana" ? 18 : 8, 0, 0, 0);
+  inicio.setHours(t === "dia_semana" ? 19 : 8, 0, 0, 0);
   const fim = new Date(d);
   fim.setDate(fim.getDate() + 1);
   fim.setHours(8, 0, 0, 0);
@@ -176,7 +176,7 @@ export function fmtDur(ms: number) {
 export const fmtHoras = (h: number) =>
   `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, "0")}m`;
 export const TIPO_LABEL: Record<Tipo, string> = {
-  dia_semana: "Dia útil · 18h→08h",
+  dia_semana: "Dia útil · 19h→08h",
   sabado: "Sábado · 24h",
   domingo: "Domingo · 24h",
 };

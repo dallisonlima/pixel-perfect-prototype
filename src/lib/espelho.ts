@@ -9,11 +9,11 @@ import {
 } from "./db";
 
 export interface LinhaEspelho {
-  inicio: string; // "18:00"
+  inicio: string; // "19:00"
   fim: string; // "18:50"
   descricao: string; // "Sobreaviso" ou justificativa
   tipo: "sobreaviso" | "acionamento";
-  texto: string; // "18:00 -> 18:50 = Sobreaviso"
+  texto: string; // "19:00 -> 19:50 = Sobreaviso"
 }
 
 export interface DiaEspelho {
@@ -128,7 +128,7 @@ export function gerarEspelhoPlantao(
   const tipo = tipoDe(sobreaviso.data);
 
   const d1Start = new Date(d1);
-  d1Start.setHours(tipo === "dia_semana" ? 18 : 8, 0, 0, 0);
+  d1Start.setHours(tipo === "dia_semana" ? 19 : 8, 0, 0, 0);
 
   const midnight = new Date(d1);
   midnight.setDate(midnight.getDate() + 1);
@@ -147,7 +147,7 @@ export function gerarEspelhoPlantao(
       a.inicio_acionamento < d2End.getTime(),
   );
 
-  const day1StartMin = tipo === "dia_semana" ? 18 * 60 : 8 * 60;
+  const day1StartMin = tipo === "dia_semana" ? 19 * 60 : 8 * 60;
   const day1EndMin = 23 * 60 + 59; // 23:59
 
   const day2StartMin = 0; // 00:00
